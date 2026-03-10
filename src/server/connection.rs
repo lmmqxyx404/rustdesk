@@ -2297,6 +2297,17 @@ impl Connection {
                 self.send_login_error(crate::client::LOGIN_MSG_OFFLINE)
                     .await;
                 return false;
+            } else if self.view_camera {
+                if err_msg.is_empty() {
+                    #[cfg(target_os = "linux")]
+                    self.linux_headless_handle.wait_desktop_cm_ready().await;
+                    if !self.send_logon_response_and_keep_alive().await {
+                        return false;
+                    }
+                    self.try_start_cm(lr.my_id, lr.my_name, self.authorized);
+                } else {
+                    self.send_login_error(err_msg).await;
+                }
             } else if (password::approve_mode() == ApproveMode::Click
                 && !(crate::get_builtin_option(keys::OPTION_ALLOW_LOGON_SCREEN_PASSWORD) == "Y"
                     && is_logon()))

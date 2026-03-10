@@ -211,7 +211,8 @@ pub fn use_texture_render() -> bool {
 
 #[inline]
 pub fn is_option_fixed(key: &str) -> bool {
-    config::OVERWRITE_DISPLAY_SETTINGS
+    (key == config::keys::OPTION_APPROVE_MODE && !config::DEFAULT_APPROVE_MODE.is_empty())
+        || config::OVERWRITE_DISPLAY_SETTINGS
         .read()
         .unwrap()
         .contains_key(key)
