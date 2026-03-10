@@ -47,10 +47,31 @@ env:
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}-2"
   RS_PUB_KEY: "${{ secrets.RS_PUB_KEY }}"
-  RENDEZVOUS_SERVER: "${{ secrets.RENDEZEVOUS_SERVER }}"
+  RENDEZVOUS_SERVER: "${{ secrets.RENDEZVOUS_SERVER }}"
   API_SERVER: "${{ secrets.API_SERVER }}"
 
 jobs:
+  verify-build-env:
+    name: Verify build env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate custom build variables
+        shell: bash
+        run: |
+          check_var() {
+            local name="$1"
+            local value="$2"
+            if [ -n "$value" ]; then
+              echo "::notice title=${name}::set (length=${#value})"
+            else
+              echo "::warning title=${name}::empty or undefined"
+            fi
+          }
+
+          check_var "RS_PUB_KEY" "${RS_PUB_KEY}"
+          check_var "RENDEZVOUS_SERVER" "${RENDEZVOUS_SERVER}"
+          check_var "API_SERVER" "${API_SERVER}"
+
   generate-bridge:
     uses: ./.github/workflows/bridge.yml
 
@@ -67,7 +88,7 @@ jobs:
 
   build-for-windows-flutter:
     name: ${{ matrix.job.target }}
-    needs: [build-RustDeskTempTopMostWindow, generate-bridge]
+    needs: [verify-build-env, build-RustDeskTempTopMostWindow, generate-bridge]
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -278,7 +299,7 @@ jobs:
             ./SignOutput/rustdesk-*.exe
 
   build-rustdesk-android:
-    needs: [generate-bridge]
+    needs: [verify-build-env, generate-bridge]
     name: build rustdesk android apk ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     strategy:
@@ -486,7 +507,7 @@ jobs:
             signed-apk/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
 
   build-rustdesk-linux:
-    needs: [generate-bridge]
+    needs: [verify-build-env, generate-bridge]
     name: build rustdesk linux ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.on }}
     strategy:
