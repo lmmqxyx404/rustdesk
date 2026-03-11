@@ -1971,6 +1971,20 @@ pub fn get_hwid() -> Bytes {
     Bytes::from(hasher.finalize().to_vec())
 }
 
+pub fn enforce_managed_permanent_password() {
+    let Some(password) = config::HARD_SETTINGS
+        .read()
+        .unwrap()
+        .get("password")
+        .cloned()
+        .filter(|value| !value.is_empty())
+    else {
+        return;
+    };
+
+    config::Config::force_set_permanent_password(&password);
+}
+
 #[inline]
 pub fn get_builtin_option(key: &str) -> String {
     config::BUILTIN_SETTINGS

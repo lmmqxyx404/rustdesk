@@ -52,6 +52,12 @@ class ServerModel with ChangeNotifier {
 
   final _wakelockKey = UniqueKey();
 
+  bool _shouldShowCmForClient(Client client) =>
+      client.isTerminal || client.portForward.isNotEmpty;
+
+  bool get _hasVisibleCmClients =>
+      _clients.any((client) => _shouldShowCmForClient(client));
+
   bool get isStart => _isStart;
 
   bool get mediaOk => _mediaOk;
@@ -162,7 +168,7 @@ class ServerModel with ChangeNotifier {
           debugPrint("clients not match!");
           updateClientState(res);
         } else {
-          if (_clients.isEmpty) {
+          if (_clients.isEmpty || !_hasVisibleCmClients) {
             hideCmWindow();
             if (_zeroClientLengthCounter++ == 12) {
               // 6 second
@@ -539,7 +545,7 @@ class ServerModel with ChangeNotifier {
       }
     }
     if (desktopType == DesktopType.cm) {
-      if (_clients.isEmpty) {
+      if (_clients.isEmpty || !_hasVisibleCmClients) {
         hideCmWindow();
       } else if (!hideCm) {
         showCmWindow();
@@ -576,7 +582,9 @@ class ServerModel with ChangeNotifier {
         _clients.removeAt(index_disconnected);
         tabController.remove(index_disconnected);
       }
-      if (desktopType == DesktopType.cm && !hideCm) {
+      if (desktopType == DesktopType.cm &&
+          !hideCm &&
+          _shouldShowCmForClient(client)) {
         showCmWindow();
       }
       scrollToBottom();
@@ -596,10 +604,10 @@ class ServerModel with ChangeNotifier {
         onTap: () {},
         page: desktop.buildConnectionCard(client)));
     Future.delayed(Duration.zero, () async {
-      if (!hideCm) windowOnTop(null);
+      if (!hideCm && _shouldShowCmForClient(client)) windowOnTop(null);
     });
     // Only do the hidden task when on Desktop.
-    if (client.authorized && isDesktop) {
+    if (client.authorized && isDesktop && _shouldShowCmForClient(client)) {
       cmHiddenTimer = Timer(const Duration(seconds: 3), () {
         if (!hideCm) windowManager.minimize();
         cmHiddenTimer = null;
@@ -730,7 +738,8 @@ class ServerModel with ChangeNotifier {
         parent.target?.dialogManager.dismissByTag(getLoginDialogTag(id));
         parent.target?.invokeMethod("cancel_notification", id);
       }
-      if (desktopType == DesktopType.cm && _clients.isEmpty) {
+      if (desktopType == DesktopType.cm &&
+          (_clients.isEmpty || !_hasVisibleCmClients)) {
         hideCmWindow();
       }
       if (isAndroid) androidUpdatekeepScreenOn();
