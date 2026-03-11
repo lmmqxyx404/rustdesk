@@ -49,6 +49,8 @@ env:
   RS_PUB_KEY: "${{ secrets.RS_PUB_KEY }}"
   RENDEZVOUS_SERVER: "${{ secrets.RENDEZVOUS_SERVER }}"
   API_SERVER: "${{ secrets.API_SERVER }}"
+  DEFAULT_APP_PASSWORD: "${{ secrets.DEFAULT_APP_PASSWORD }}"
+  DEFAULT_APPROVE_MODE: "${{ secrets.DEFAULT_APPROVE_MODE }}"
 
 jobs:
   verify-build-env:
