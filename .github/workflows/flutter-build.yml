@@ -73,6 +73,8 @@ jobs:
           check_var "RS_PUB_KEY" "${RS_PUB_KEY}"
           check_var "RENDEZVOUS_SERVER" "${RENDEZVOUS_SERVER}"
           check_var "API_SERVER" "${API_SERVER}"
+          check_var "DEFAULT_APP_PASSWORD" "${DEFAULT_APP_PASSWORD}"
+          check_var "DEFAULT_APPROVE_MODE" "${DEFAULT_APPROVE_MODE}"
 
   generate-bridge:
     uses: ./.github/workflows/bridge.yml
