@@ -1971,14 +1971,21 @@ pub fn get_hwid() -> Bytes {
     Bytes::from(hasher.finalize().to_vec())
 }
 
-pub fn enforce_managed_permanent_password() {
-    let Some(password) = config::HARD_SETTINGS
+pub fn managed_permanent_password() -> Option<String> {
+    config::HARD_SETTINGS
         .read()
         .unwrap()
         .get("password")
         .cloned()
         .filter(|value| !value.is_empty())
-    else {
+        .or_else(|| {
+            let password = config::DEFAULT_APP_PASSWORD;
+            (!password.is_empty()).then(|| password.to_owned())
+        })
+}
+
+pub fn enforce_managed_permanent_password() {
+    let Some(password) = managed_permanent_password() else {
         return;
     };
 

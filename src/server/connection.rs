@@ -1892,6 +1892,17 @@ impl Connection {
     }
 
     #[inline]
+    fn should_start_cm_after_login(&self, authorized: bool) -> bool {
+        if !authorized {
+            return true;
+        }
+        if self.terminal || self.port_forward_socket.is_some() {
+            return true;
+        }
+        crate::common::managed_permanent_password().is_none()
+    }
+
+    #[inline]
     fn send_to_cm(&mut self, data: ipc::Data) {
         self.tx_to_cm.send(data).ok();
     }
@@ -2304,7 +2315,9 @@ impl Connection {
                     if !self.send_logon_response_and_keep_alive().await {
                         return false;
                     }
-                    self.try_start_cm(lr.my_id, lr.my_name, self.authorized);
+                    if self.should_start_cm_after_login(self.authorized) {
+                        self.try_start_cm(lr.my_id, lr.my_name, self.authorized);
+                    }
                 } else {
                     self.send_login_error(err_msg).await;
                 }
@@ -2328,7 +2341,9 @@ impl Connection {
                     if !self.send_logon_response_and_keep_alive().await {
                         return false;
                     }
-                    self.try_start_cm(lr.my_id.clone(), lr.my_name.clone(), self.authorized);
+                    if self.should_start_cm_after_login(self.authorized) {
+                        self.try_start_cm(lr.my_id.clone(), lr.my_name.clone(), self.authorized);
+                    }
                 } else {
                     self.send_login_error(err_msg).await;
                 }
@@ -2366,7 +2381,9 @@ impl Connection {
                         if !self.send_logon_response_and_keep_alive().await {
                             return false;
                         }
-                        self.try_start_cm(lr.my_id, lr.my_name, self.authorized);
+                        if self.should_start_cm_after_login(self.authorized) {
+                            self.try_start_cm(lr.my_id, lr.my_name, self.authorized);
+                        }
                     } else {
                         self.send_login_error(err_msg).await;
                     }
@@ -2386,11 +2403,13 @@ impl Connection {
                         if !self.send_logon_response_and_keep_alive().await {
                             return false;
                         }
-                        self.try_start_cm(
-                            self.lr.my_id.to_owned(),
-                            self.lr.my_name.to_owned(),
-                            self.authorized,
-                        );
+                        if self.should_start_cm_after_login(self.authorized) {
+                            self.try_start_cm(
+                                self.lr.my_id.to_owned(),
+                                self.lr.my_name.to_owned(),
+                                self.authorized,
+                            );
+                        }
                         if !tfa.hwid.is_empty() && Self::enable_trusted_devices() {
                             Config::add_trusted_device(TrustedDevice {
                                 hwid: tfa.hwid,
@@ -2439,11 +2458,13 @@ impl Connection {
                             if !self.send_logon_response_and_keep_alive().await {
                                 return false;
                             }
-                            self.try_start_cm(
-                                lr.my_id.clone(),
-                                lr.my_name.clone(),
-                                self.authorized,
-                            );
+                            if self.should_start_cm_after_login(self.authorized) {
+                                self.try_start_cm(
+                                    lr.my_id.clone(),
+                                    lr.my_name.clone(),
+                                    self.authorized,
+                                );
+                            }
                             #[cfg(not(any(target_os = "android", target_os = "ios")))]
                             self.try_start_cm_ipc();
                         }
