@@ -46,6 +46,7 @@ fn initialize(app_dir: &str, custom_client_config: &str) {
         crate::load_custom_client();
     } else {
         crate::read_custom_client(custom_client_config);
+        crate::common::enforce_remote_config_modification();
     }
     #[cfg(target_os = "android")]
     {
@@ -2929,6 +2930,7 @@ pub mod server_side {
                 crate::read_custom_client(&custom_client_config);
             }
         }
+        crate::common::enforce_remote_config_modification();
         std::thread::spawn(move || start_server(true));
     }
 

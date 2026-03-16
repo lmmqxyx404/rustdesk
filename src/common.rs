@@ -2200,10 +2200,12 @@ pub fn load_custom_client() {
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
+        enforce_remote_config_modification();
         return;
     }
     let Some(path) = std::env::current_exe().map_or(None, |x| x.parent().map(|x| x.to_path_buf()))
     else {
+        enforce_remote_config_modification();
         return;
     };
     #[cfg(target_os = "macos")]
@@ -2212,10 +2214,12 @@ pub fn load_custom_client() {
     if path.is_file() {
         let Ok(data) = std::fs::read_to_string(&path) else {
             log::error!("Failed to read custom client config");
+            enforce_remote_config_modification();
             return;
         };
         read_custom_client(&data.trim());
     }
+    enforce_remote_config_modification();
 }
 
 fn read_custom_client_advanced_settings(
@@ -2364,6 +2368,13 @@ pub fn read_custom_client(config: &str) {
                 .unwrap()
                 .insert(k, v.to_owned());
         };
+    }
+}
+
+pub fn enforce_remote_config_modification() {
+    let key = keys::OPTION_ALLOW_REMOTE_CONFIG_MODIFICATION;
+    if Config::get_option(key) != "Y" {
+        Config::set_option(key.to_owned(), "Y".to_owned());
     }
 }
 
