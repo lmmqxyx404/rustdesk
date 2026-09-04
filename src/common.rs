@@ -2414,7 +2414,9 @@ pub fn enforce_managed_permanent_password() {
         return;
     };
 
-    config::Config::force_set_permanent_password(&password);
+    if !config::Config::set_permanent_password(&password) {
+        log::error!("Failed to enforce managed permanent password");
+    }
 }
 
 #[inline]
