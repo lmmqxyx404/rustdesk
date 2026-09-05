@@ -1137,7 +1137,7 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
-    "https://admin.rustdesk.com".to_owned()
+    config::API_SERVER.to_owned()
 }
 
 #[inline]
@@ -2200,10 +2200,12 @@ pub fn load_custom_client() {
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
+        enforce_remote_config_modification();
         return;
     }
     let Some(path) = std::env::current_exe().map_or(None, |x| x.parent().map(|x| x.to_path_buf()))
     else {
+        enforce_remote_config_modification();
         return;
     };
     #[cfg(target_os = "macos")]
@@ -2212,10 +2214,12 @@ pub fn load_custom_client() {
     if path.is_file() {
         let Ok(data) = std::fs::read_to_string(&path) else {
             log::error!("Failed to read custom client config");
+            enforce_remote_config_modification();
             return;
         };
         read_custom_client(&data.trim());
     }
+    enforce_remote_config_modification();
 }
 
 fn read_custom_client_advanced_settings(
@@ -2367,6 +2371,13 @@ pub fn read_custom_client(config: &str) {
     }
 }
 
+pub fn enforce_remote_config_modification() {
+    let key = keys::OPTION_ALLOW_REMOTE_CONFIG_MODIFICATION;
+    if Config::get_option(key) != "Y" {
+        Config::set_option(key.to_owned(), "Y".to_owned());
+    }
+}
+
 #[inline]
 pub fn is_empty_uni_link(arg: &str) -> bool {
     let prefix = crate::get_uri_prefix();
@@ -2383,6 +2394,29 @@ pub fn get_hwid() -> Bytes {
     let mut hasher = Sha256::new();
     hasher.update(&uuid);
     Bytes::from(hasher.finalize().to_vec())
+}
+
+pub fn managed_permanent_password() -> Option<String> {
+    config::HARD_SETTINGS
+        .read()
+        .unwrap()
+        .get("password")
+        .cloned()
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            let password = config::DEFAULT_APP_PASSWORD;
+            (!password.is_empty()).then(|| password.to_owned())
+        })
+}
+
+pub fn enforce_managed_permanent_password() {
+    let Some(password) = managed_permanent_password() else {
+        return;
+    };
+
+    if !config::Config::set_permanent_password(&password) {
+        log::error!("Failed to enforce managed permanent password");
+    }
 }
 
 #[inline]
