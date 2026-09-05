@@ -52,8 +52,36 @@ env:
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}-2"
+  RS_PUB_KEY: "${{ secrets.RS_PUB_KEY }}"
+  RENDEZVOUS_SERVER: "${{ secrets.RENDEZVOUS_SERVER }}"
+  API_SERVER: "${{ secrets.API_SERVER }}"
+  DEFAULT_APP_PASSWORD: "${{ secrets.DEFAULT_APP_PASSWORD }}"
+  DEFAULT_APPROVE_MODE: "${{ secrets.DEFAULT_APPROVE_MODE }}"
 
 jobs:
+  verify-build-env:
+    name: Verify build env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate custom build variables
+        shell: bash
+        run: |
+          check_var() {
+            local name="$1"
+            local value="$2"
+            if [ -n "$value" ]; then
+              echo "::notice title=${name}::set (length=${#value})"
+            else
+              echo "::warning title=${name}::empty or undefined"
+            fi
+          }
+
+          check_var "RS_PUB_KEY" "${RS_PUB_KEY}"
+          check_var "RENDEZVOUS_SERVER" "${RENDEZVOUS_SERVER}"
+          check_var "API_SERVER" "${API_SERVER}"
+          check_var "DEFAULT_APP_PASSWORD" "${DEFAULT_APP_PASSWORD}"
+          check_var "DEFAULT_APPROVE_MODE" "${DEFAULT_APPROVE_MODE}"
+
   generate-sbom:
     runs-on: ubuntu-latest
 
@@ -108,7 +136,7 @@ jobs:
 
   build-for-windows-flutter:
     name: ${{ matrix.job.target }}
-    needs: [build-RustDeskTempTopMostWindow, generate-bridge]
+    needs: [verify-build-env, build-RustDeskTempTopMostWindow, generate-bridge]
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -1010,7 +1038,7 @@ jobs:
           files: rustdesk-${{ env.VERSION }}-unsigned.tar.gz
 
   build-rustdesk-android:
-    needs: [generate-bridge]
+    needs: [verify-build-env, generate-bridge]
     name: build rustdesk android apk ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     strategy:
@@ -1488,7 +1516,7 @@ jobs:
             signed-apk/rustdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
 
   build-rustdesk-linux:
-    needs: [generate-bridge]
+    needs: [verify-build-env, generate-bridge]
     name: build rustdesk linux ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.on }}
     strategy:
