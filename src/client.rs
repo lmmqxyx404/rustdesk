@@ -355,6 +355,28 @@ fn tcp_punch_allowed() -> bool {
             || crate::get_webrtc_enabled())
 }
 
+fn should_forward_api_token_to_hbbs(setting: Option<&str>) -> bool {
+    setting.map_or(false, |value| {
+        ["1", "true", "yes", "on"]
+            .iter()
+            .any(|enabled| value.trim().eq_ignore_ascii_case(enabled))
+    })
+}
+
+#[cfg(test)]
+mod rendezvous_api_token_tests {
+    use super::should_forward_api_token_to_hbbs;
+
+    #[test]
+    fn api_token_is_not_forwarded_to_hbbs_unless_explicitly_enabled() {
+        assert!(!should_forward_api_token_to_hbbs(None));
+        assert!(!should_forward_api_token_to_hbbs(Some("false")));
+        assert!(!should_forward_api_token_to_hbbs(Some("0")));
+        assert!(should_forward_api_token_to_hbbs(Some("true")));
+        assert!(should_forward_api_token_to_hbbs(Some(" YES ")));
+    }
+}
+
 impl Client {
     const CLIENT_CLIPBOARD_NAME: &'static str = "client-clipboard";
 
@@ -847,7 +869,19 @@ impl Client {
         };
 
         let switch_code = interface.get_switch_code();
-        let legacy_secure = !key.is_empty() && (!token.is_empty() || !switch_code.is_empty());
+        // `token` is the client's API account token. OSS hbbs does not use it in a
+        // PunchHoleRequest, and treating it as rendezvous authentication can make the client
+        // wait for a secure-TCP exchange that this hbbs does not perform. Keep forwarding
+        // opt-in for deployments whose rendezvous server explicitly requires this field.
+        let rendezvous_token = if should_forward_api_token_to_hbbs(option_env!(
+            "RUSTDESK_FORWARD_API_TOKEN_TO_HBBS"
+        )) {
+            token.as_str()
+        } else {
+            ""
+        };
+        let legacy_secure =
+            !key.is_empty() && (!rendezvous_token.is_empty() || !switch_code.is_empty());
         let carries_offer = webrtc_offerer.as_ref().and_then(|g| g.stream()).is_some();
         // Counted from before the key exchange, so the exchange spends the UDP NAT test's own
         // wait rather than replacing it: the test runs beside both.
@@ -942,7 +976,7 @@ impl Client {
         };
         msg_out.set_punch_hole_request(PunchHoleRequest {
             id: peer.to_owned(),
-            token: token.to_owned(),
+            token: rendezvous_token.to_owned(),
             nat_type: nat_type.into(),
             licence_key: key.to_owned(),
             conn_type: conn_type.into(),
