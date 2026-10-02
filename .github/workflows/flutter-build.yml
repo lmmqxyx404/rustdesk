@@ -56,6 +56,8 @@ env:
   RS_PUB_KEY: "${{ secrets.RS_PUB_KEY }}"
   RENDEZVOUS_SERVER: "${{ secrets.RENDEZVOUS_SERVER }}"
   API_SERVER: "${{ secrets.API_SERVER }}"
+  # The API account token belongs to rustdesk-api; OSS hbbs does not need it.
+  RUSTDESK_FORWARD_API_TOKEN_TO_HBBS: "false"
   DEFAULT_APP_PASSWORD: "${{ secrets.DEFAULT_APP_PASSWORD }}"
   DEFAULT_APPROVE_MODE: "${{ secrets.DEFAULT_APPROVE_MODE }}"
 
